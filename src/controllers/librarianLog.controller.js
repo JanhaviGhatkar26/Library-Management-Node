@@ -3,6 +3,7 @@ import { asyncHandler } from "../utils/asynchandler.util.js";
 import { apiError } from "../utils/apiError.util.js";
 import { ApiResponse } from "../utils/apiResponse.util.js";
 import { validationResult } from "express-validator";
+import { setValue, getValue, deleteValue } from "../utils/redis.js";
 
 const generateAccess_RefreshToken = async (librarianId) => {
   try {
@@ -29,7 +30,6 @@ const registerLibrarian = asyncHandler(async (req, res) => {
 
     if (
       [name, mobile_no, address, password, status].some((field) => {
-        console.log("field", field);
         return typeof field === "string" && field.trim() === "";
       })
     ) {
@@ -37,11 +37,11 @@ const registerLibrarian = asyncHandler(async (req, res) => {
     }
 
     const existedAdmin = await Librarian.findOne({
-      $or: [{ name }, { mobile_no }],
+      $or: [{ name }, { mobile_no }, { userName }],
     });
     if (existedAdmin) {
       return res.status(409).json({
-        Status: `Admin with email or phone is already exist`,
+        Status: `Admin with email / phone / username is already exist`,
         existedAdmin,
       });
     }
@@ -62,6 +62,7 @@ const registerLibrarian = asyncHandler(async (req, res) => {
     const librarian = await Librarian.findById(newLibrarian._id).select(
       "-password"
     );
+    await deleteValue("all-librarians");
     return res
       .status(201)
       .json({ Status: "Admin registerd successfully..!!", librarian });
@@ -115,6 +116,11 @@ const loginLibrarian = asyncHandler(async (req, res) => {
       httpOnly: true,
       secure: true,
     };
+    await setValue(`${userName}-loggedin`, {
+      logedLibrarian,
+      accessToken,
+      refreshToken,
+    });
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)

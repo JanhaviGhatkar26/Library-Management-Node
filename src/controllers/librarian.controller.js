@@ -1,7 +1,10 @@
+// import { redisInstance, RedisClient } from "../db/database.js";
 import { Librarian } from "../models/librarian.model.js";
 import { asyncHandler } from "../utils/asynchandler.util.js";
 import { validationResult } from "express-validator";
+import { setValue, getValue, deleteValue } from "../utils/redis.js";
 
+// const redisClient = new RedisClient();
 const vailidLibrarian = async (req, res) => {
   try {
     const id = req.params.id;
@@ -22,12 +25,19 @@ const vailidLibrarian = async (req, res) => {
 
 const getAllLibrarians = asyncHandler(async (req, res) => {
   try {
-    const librarians = await Librarian.find({}).select(
-      "-password -refreshToken"
-    );
+    let librarianData = await getValue("all-librarians");
+    // librarianData = JSON.parse(librarianData); // Parse the JSON string
+    if (librarianData) {
+      return res.status(200).json({
+        Status: "Data found from Redis",
+        librarianData,
+      });
+    }
+    let librarians = await Librarian.find({}).select("-password -refreshToken");
     if (!librarians || librarians.length === 0) {
       return res.status(400).json({ Status: `No admin found` });
     }
+    await setValue("all-librarians", librarians);
     return res.status(200).json({ Status: "Data found", librarians });
   } catch (error) {
     console.log(error);
@@ -48,7 +58,8 @@ const getLibrarianById = asyncHandler(async (req, res) => {
 const deletedLibrarianById = asyncHandler(async (req, res) => {
   try {
     const librarian = await vailidLibrarian(req, res);
-    const deletedUser = await Librarian.findByIdAndDelete(librarian._id);
+    await Librarian.findByIdAndDelete(librarian._id);
+    await deleteValue("all-librarians");
     return res
       .status(200)
       .json({ Status: "Librarian deleted successfully..!" });
@@ -91,7 +102,8 @@ const updateLibrarianById = asyncHandler(async (req, res) => {
       return res.status(400).json({ Status: "No librarian updated" });
     }
     const data = await Librarian.findById(updatedLibrarian._id);
-    return res.status(200).json({ Status: "Updated librarian", Data: data });
+    await deleteValue("all-librarians");
+    return res.status(200).json({ Status: "Updated librarian", data });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ Error: error.message });

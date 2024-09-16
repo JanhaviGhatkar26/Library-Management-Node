@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Redis from "ioredis";
 import { DB_Name } from "../constant.js";
 
 const databaseConnection = async () => {
@@ -11,4 +12,22 @@ const databaseConnection = async () => {
     console.log("Mongoose connection FAILED", error);
   }
 };
-export { databaseConnection };
+
+console.log("process.env.REDIS_HOST :", process.env.REDIS_HOST);
+console.log("process.env.REDISPORT :", process.env.REDISPORT);
+
+const redisInstance = new Redis({
+  host: process.env.REDIS_HOST, // Default Redis host
+  port: process.env.REDISPORT, // Default Redis port
+  db: 0, // Select Redis DB index (default is 0)
+});
+
+redisInstance.on("connect", () => {
+  console.log("Connected to Redis successfully");
+});
+
+redisInstance.on("error", (err) => {
+  console.error("Redis connection error:", err);
+});
+
+export { databaseConnection, redisInstance };
