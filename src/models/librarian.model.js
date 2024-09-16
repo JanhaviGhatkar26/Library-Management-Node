@@ -10,8 +10,7 @@ const librarianSchema = new Schema(
       type: String,
     },
     mobile_no: {
-      type: Number,
-      unique: true,
+      type: String,
     },
     email: {
       type: String,

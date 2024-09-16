@@ -1,24 +1,35 @@
 import yup from "yup";
+const phoneRegExp = /^[6-9]\d{9}$/;
 const baseUserSchema = yup.object().shape({
   name: yup
     .string()
-    .required("Name is required")
-    .min(3, "Name must be at least 3 characters"),
+    .required("Username is required")
+    .min(4, "Username must be at least 4 characters")
+    .matches(/^[A-Za-z\s]+$/, "Username must only contain letters and spaces"),
+
   mobile_no: yup
     .string()
-    .matches(/^[0-9]{10}$/, "Mobile number must be exactly 10 digits")
-    .required("Mobile number is required"),
+    .matches(phoneRegExp, "Phone number is not valid")
+    .required(),
+
+  // mobile_no: yup
+  //   .number()
+  //   .required("Mobile number is required")
+  //   .min(1000000000, "Mobile number must be exactly 10 digits"),
+
   email: yup
     .string()
-    .email("Invalid email format")
-    .required("Email is required"),
-  adress: yup.string().required("Address is required"),
+    .email("Invalid email format") // Basic email validation provided by yup
+    .required("Email is required")
+    .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email format"),
+  address: yup.string().required("Address is required"),
 });
 const librarianScema = baseUserSchema.shape({
-  userName: yup
-    .string()
-    .required("username is required")
-    .min(4, "Username must be at least 4 characters"),
+  // userName: yup
+  //   .string()
+  //   .required("Username is required")
+  //   .min(4, "Username must be at least 4 characters"),
+
   password: yup
     .string()
     .min(6, "Password must be at least 6 characters")
@@ -50,8 +61,15 @@ const studentSchema = baseUserSchema.shape({
     .transform((value) => value?.toUpperCase()) // Automatically convert to uppercase
     .oneOf(["A", "B", "C", "D"], "Division must be one of A, B, C, or D") // Restrict input to A-D
     .required("Division is required"),
-  photo: yup.required(),
+  // photo: yup.required("Student photo is required"),
 });
+export function capitalizeWords(str) {
+  return str
+    .toLowerCase() // Convert the whole string to lowercase first
+    .split(" ") // Split the string by spaces
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter of each word
+    .join(" "); // Join the words back into a string
+}
 export { librarianScema, studentSchema };
 
 // role: yup

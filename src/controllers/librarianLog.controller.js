@@ -4,6 +4,7 @@ import { apiError } from "../utils/apiError.util.js";
 import { ApiResponse } from "../utils/apiResponse.util.js";
 import { validationResult } from "express-validator";
 import { setValue, getValue, deleteValue } from "../utils/redis.js";
+import { capitalizeWords, librarianScema } from "../validator/YupValidation.js";
 
 const generateAccess_RefreshToken = async (librarianId) => {
   try {
@@ -21,24 +22,28 @@ const generateAccess_RefreshToken = async (librarianId) => {
 
 const registerLibrarian = asyncHandler(async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    const { name, mobile_no, address, password, status, userName } = req.body;
-    console.log("req.body :", req.body);
+    // const errors = validationResult(req);
+    // if (!errors.isEmpty()) {
+    //   return res.status(400).json({ errors: errors.array() });
+    // }
+    await librarianScema.validate(req.body, { abortEarly: false });
+    const { name, mobile_no, address, password, status, userName, email } =
+      req.body;
+    // console.log("req.body :", req.body);
 
-    if (
-      [name, mobile_no, address, password, status].some((field) => {
-        return typeof field === "string" && field.trim() === "";
-      })
-    ) {
-      return res.status(400).json({ Status: "All fields are compulsory" });
-    }
-
+    // if (
+    //   [name, mobile_no, address, password, status].some((field) => {
+    //     return typeof field === "string" && field.trim() === "";
+    //   })
+    // ) {
+    //   return res.status(400).json({ Status: "All fields are compulsory" });
+    // // }
+    // console.log(typeof mobile_no);
+    // let mobileNo = Number(mobile_no);
+    // console.log(typeof mobileNo);
     const existedAdmin = await Librarian.findOne({
-      $or: [{ name }, { mobile_no }, { userName }],
-    });
+      $or: [{ name }, { mobile_no }, { userName }, { email }],
+    }).select("userName name address");
     if (existedAdmin) {
       return res.status(409).json({
         Status: `Admin with email / phone / username is already exist`,
@@ -47,7 +52,8 @@ const registerLibrarian = asyncHandler(async (req, res) => {
     }
 
     const insertData = {
-      name: name.trim().toLowerCase(),
+      name: capitalizeWords(name.trim()),
+      email: email,
       mobile_no: mobile_no,
       address: address,
       password: password,
@@ -60,15 +66,20 @@ const registerLibrarian = asyncHandler(async (req, res) => {
         .json({ Status: `Something went wrong while registering librarian` });
     }
     const librarian = await Librarian.findById(newLibrarian._id).select(
-      "-password"
+      "name userName mobile_no email address"
     );
     await deleteValue("all-librarians");
     return res
       .status(201)
-      .json({ Status: "Admin registerd successfully..!!", librarian });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ Error: error.message });
+      .json({ Status: "Librarian registerd successfully..!!", librarian });
+  } catch (err) {
+    if (err.name === "ValidationError") {
+      const formattedErrors = err.inner.map((currError) => currError.message);
+      return res.status(400).json({ errors: formattedErrors });
+    }
+
+    // Handle other errors
+    res.status(500).json({ error: "An unexpected error occurred" });
   }
 });
 
@@ -91,7 +102,9 @@ const loginLibrarian = asyncHandler(async (req, res) => {
     if (existingAccessToken) {
       return res.status(400).json({ status: "Librarian is already logged in" });
     }
-    const librarian = await Librarian.findOne({ userName: userName });
+    const librarian = await Librarian.findOne({ userName: userName }).select(
+      "userName name address"
+    );
     if (!librarian) {
       return res.status(400).json({ Status: "Librarian does not exist" });
     }
