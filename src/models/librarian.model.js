@@ -1,33 +1,34 @@
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
+import { string } from "yup";
 
 const librarianSchema = new Schema(
   {
     name: {
       type: String,
-      required: true,
     },
     mobile_no: {
       type: Number,
-      required: true,
       unique: true,
+    },
+    email: {
+      type: String,
     },
     address: {
       type: String,
     },
     userName: {
       type: String,
-      // unique: true,
-      // required:true,
     },
     password: {
       type: String,
     },
     status: {
-      type: Boolean,
-      default: true,
+      type: String,
+      enum: ["1", "2"], // Restrict values to '1' active or '2' deactive
+      default: "1", // Set the default value to '1'
     },
     refreshToken: {
       type: String,

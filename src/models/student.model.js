@@ -3,29 +3,22 @@ const studentSchema = new Schema(
   {
     name: {
       type: String,
-      required: true,
-      lowecase: true,
-      trim: true,
     },
     mobile_no: {
       type: Number,
-      required: true,
+    },
+    email: { type: String },
+    address: {
+      type: String,
     },
     studentClass: {
       type: Number,
-      enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      enum: Array.from({ length: 15 }, (_, i) => i + 1), // Generates [1, 2, ..., 15]
       required: true,
     },
     division: {
       type: String,
-      enum: ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",],
-      required: true,
-      lowecase: true,
-      trim: true,
-    },
-    address: {
-      type: String,
-      required: true,
+      enum: ["A", "B", "C", "D"],
     },
     photo: {
       type: String,
@@ -34,10 +27,9 @@ const studentSchema = new Schema(
       type: String,
     },
     status: {
-      type: Boolean,
-      default: true,
-      lowecase: true,
-      trim: true,
+      type: String,
+      enum: ["1", "2"], // Restrict values to '1' active or '2' deactive
+      default: "1", // Set the default value to '1'
     },
     created_by: {
       type: String,
@@ -64,7 +56,7 @@ const studentSchema = new Schema(
 //         const photoFolder = path.join( __dirname, `../public/student_photos/${doc._id}`);
 //         if (!fs.existsSync(photoFolder)) {
 //           fs.mkdirSync(photoFolder);
-//         }   
+//         }
 //         const photoPath = path.join(photoFolder, "photo.jpg");
 //         fs.writeFileSync(photoPath, doc.photoFile.buffer);
 //         doc.photo = photoPath;
@@ -78,7 +70,7 @@ const studentSchema = new Schema(
 //         const studentIdString = doc._id.toString();
 //         await qrcode.toFile(qrCodePath,studentIdString);
 //         doc.QR_code = qrCodePath;
-//         await doc.save();   
+//         await doc.save();
 //       }
 //       next();
 //     } catch (error) {
