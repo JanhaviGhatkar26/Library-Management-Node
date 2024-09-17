@@ -1,6 +1,5 @@
 import { Book } from "../models/book.model.js";
 import { asyncHandler } from "../utils/asynchandler.util.js";
-import { ApiResponse } from "../utils/apiResponse.util.js";
 import { apiError } from "../utils/apiError.util.js";
 import { ObjectId } from "mongodb";
 
@@ -51,9 +50,7 @@ const addNewBook = asyncHandler(async (req, res) => {
         .status(400)
         .json({ Status: `Something went wrong while adding book` });
     }
-    return res
-      .status(201)
-      .json(new ApiResponse(200, "Book added successfuly", newBook));
+    return res.status(201).json({ message: "Book added successfuly", newBook });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ Error: error.message });
@@ -205,64 +202,65 @@ const updateBookById = asyncHandler(async (req, res) => {
   try {
     const bookId = req.params.id;
     const { shelfNo, quantity, status } = req.body;
-    if (
-      [shelfNo, quantity, status].some((field) => field?.trim() === "")
-    ) {
+    if ([shelfNo, quantity, status].some((field) => field?.trim() === "")) {
+      return res.status(400).json({
+        Status:
+          "At least one of shelfNo, quantity, or status is compulsory to update book details.",
+      });
+    }
+    const founded_data = await Book.findById(bookId);
+    if (!founded_data || founded_data.length === 0) {
       return res
         .status(400)
-        .json({
-          Status:
-            "At least one of shelfNo, quantity, or status is compulsory to update book details.",
-        });
+        .json({ Status: `Book not found for the given ID: ${bookId}` });
     }
-    const founded_data  = await Book.findById(bookId);
-    if(!founded_data || founded_data.length === 0){
-        return res.status(400).json({Status:`Book not found for the given ID: ${bookId}`})
-    }
-    const updatedBook = await Book.findByIdAndUpdate(founded_data._id,{
-        shelfNo:shelfNo, 
-        quantity:quantity, 
-        status:status.toLowerCase(),
-        updated_by:req.person.name
-    })
-    if(!updatedBook){
-        return res.status(400).json({ Status: "No book updated" });
+    const updatedBook = await Book.findByIdAndUpdate(founded_data._id, {
+      shelfNo: shelfNo,
+      quantity: quantity,
+      status: status.toLowerCase(),
+      updated_by: req.person.name,
+    });
+    if (!updatedBook) {
+      return res.status(400).json({ Status: "No book updated" });
     }
     const pipeline = [
-        {
-          '$match': {
-            '_id': new ObjectId(updatedBook._id)
-          }
-        }, {
-          '$lookup': {
-            'from': 'librarians', 
-            'localField': 'librarianID', 
-            'foreignField': '_id', 
-            'as': 'LibrarianDetails'
-          }
-        }, {
-          '$unwind': {
-            'path': '$LibrarianDetails', 
-            'preserveNullAndEmptyArrays': true
-          }
-        }, {
-          '$project': {
-            '_id': 1, 
-            'title': 1, 
-            'description': 1, 
-            'author': 1, 
-            'publishDate': 1, 
-            'shelfNo': 1, 
-            'quantity': 1, 
-            'status': 1, 
-            'created_by': 1, 
-            'updated_by': 1, 
-            'LibrarianDetails.name': 1, 
-            'LibrarianDetails.userName': 1, 
-            'LibrarianDetails.status': 1
-          }
-        }
-      ]
+      {
+        $match: {
+          _id: new ObjectId(updatedBook._id),
+        },
+      },
+      {
+        $lookup: {
+          from: "librarians",
+          localField: "librarianID",
+          foreignField: "_id",
+          as: "LibrarianDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$LibrarianDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          author: 1,
+          publishDate: 1,
+          shelfNo: 1,
+          quantity: 1,
+          status: 1,
+          created_by: 1,
+          updated_by: 1,
+          "LibrarianDetails.name": 1,
+          "LibrarianDetails.userName": 1,
+          "LibrarianDetails.status": 1,
+        },
+      },
+    ];
     const book = await Book.aggregate(pipeline);
     return res.status(200).json({ Status: "Updated book.", Data: book });
   } catch (error) {
