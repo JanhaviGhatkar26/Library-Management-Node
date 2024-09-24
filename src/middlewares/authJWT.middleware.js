@@ -6,7 +6,7 @@ export const jwtVerification = asyncHandler(async (req, res, next) => {
     const token =
       req.cokkies?.accssToken ||
       req.header("Authorization")?.replace("Bearer ", "");
-      console.log(req.body);
+    console.log(req.body);
     if (!token) {
       return res.status(401).json({ Status: `Unothorized request` });
     }

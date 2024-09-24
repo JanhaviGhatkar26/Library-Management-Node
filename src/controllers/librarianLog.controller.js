@@ -21,27 +21,13 @@ const generateAccess_RefreshToken = async (librarianId) => {
 
 const registerLibrarian = asyncHandler(async (req, res) => {
   try {
-    // const errors = validationResult(req);
-    // if (!errors.isEmpty()) {
-    //   return res.status(400).json({ errors: errors.array() });
-    // }
     await librarianScema.validate(req.body, { abortEarly: false });
     const { name, mobile_no, address, password, status, userName, email } =
       req.body;
-    // console.log("req.body :", req.body);
-
-    // if (
-    //   [name, mobile_no, address, password, status].some((field) => {
-    //     return typeof field === "string" && field.trim() === "";
-    //   })
-    // ) {
-    //   return res.status(400).json({ Status: "All fields are compulsory" });
-    // // }
-    // console.log(typeof mobile_no);
-    // let mobileNo = Number(mobile_no);
-    // console.log(typeof mobileNo);
     const existedAdmin = await Librarian.findOne({
       $or: [{ name }, { mobile_no }, { userName }, { email }],
+      status: "1",
+      is_deleted: "0",
     }).select("userName name address");
     if (existedAdmin) {
       return res.status(409).json({
@@ -76,8 +62,6 @@ const registerLibrarian = asyncHandler(async (req, res) => {
       const formattedErrors = err.inner.map((currError) => currError.message);
       return res.status(400).json({ errors: formattedErrors });
     }
-
-    // Handle other errors
     res.status(500).json({ error: "An unexpected error occurred" });
   }
 });
@@ -99,7 +83,13 @@ const loginLibrarian = asyncHandler(async (req, res) => {
     if (req.cookies.accessToken) {
       return res.status(400).json({ status: "Librarian is already logged in" });
     }
-    const librarian = await Librarian.findOne({ userName: userName });
+    // const librarian = await Librarian.findOne({ userName: userName });
+    const librarian = await Librarian.findOne({
+      userName: userName,
+      status: "1",
+      is_deleted: "0",
+    });
+
     if (!librarian) {
       return res.status(400).json({ Status: "Librarian does not exist" });
     }
@@ -107,15 +97,6 @@ const loginLibrarian = asyncHandler(async (req, res) => {
     const isPasswordValid = await librarian.isPasswordCorrect(password);
     if (!isPasswordValid) {
       return res.status(400).json({ Status: "Invalid login credentials" });
-    }
-    if (
-      librarian.status === "0" ||
-      librarian.status === undefined ||
-      librarian.status === null
-    ) {
-      return res.status(400).json({
-        Status: "Libranian is not active",
-      });
     }
     const { accessToken, refreshToken } = await generateAccess_RefreshToken(
       librarian._id

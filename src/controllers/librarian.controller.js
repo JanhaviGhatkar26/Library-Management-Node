@@ -8,9 +8,10 @@ import { setValue, getValue, deleteValue } from "../utils/redis.js";
 const vailidLibrarian = async (req, res) => {
   try {
     const id = req.params.id;
-    const foundData = await Librarian.findById(id).select(
+    const foundData = await Librarian.findOne({ _id: id, status: "1" }).select(
       "-password -refreshToken"
     );
+
     if (!foundData || foundData.length === 0) {
       return res
         .status(404)
@@ -26,14 +27,16 @@ const vailidLibrarian = async (req, res) => {
 const getAllLibrarians = asyncHandler(async (req, res) => {
   try {
     let librarianData = await getValue("all-librarians");
-    // librarianData = JSON.parse(librarianData); // Parse the JSON string
     if (librarianData) {
       return res.status(200).json({
         Status: "Data found from Redis",
         librarianData,
       });
     }
-    let librarians = await Librarian.find({}).select("-password -refreshToken");
+    let librarians = await Librarian.find({
+      status: "1",
+      is_deleted: "0",
+    }).select("-password -refreshToken");
     if (!librarians || librarians.length === 0) {
       return res.status(400).json({ Status: `No admin found` });
     }
@@ -58,7 +61,12 @@ const getLibrarianById = asyncHandler(async (req, res) => {
 const deletedLibrarianById = asyncHandler(async (req, res) => {
   try {
     const librarian = await vailidLibrarian(req, res);
-    await Librarian.findByIdAndDelete(librarian._id);
+    // await Librarian.findByIdAndDelete(librarian._id);
+    await Librarian.findByIdAndUpdate(
+      librarian._id,
+      { status: "0", is_deleted: "1" },
+      { new: true } // This option ensures that the updated document is returned
+    );
     await deleteValue("all-librarians");
     return res
       .status(200)

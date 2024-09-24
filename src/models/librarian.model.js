@@ -26,8 +26,13 @@ const librarianSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["1", "2"], // Restrict values to '1' active or '2' deactive
+      enum: ["1", "0"], // Restrict values to '1' active or '0' deactive
       default: "1", // Set the default value to '1'
+    },
+    is_deleted: {
+      type: String,
+      enum: ["1", "0"], // Restrict values to '1' deleted or '0' No deleted
+      default: "0", // Set the default value to '1'
     },
     refreshToken: {
       type: String,
